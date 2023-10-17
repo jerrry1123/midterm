@@ -1,0 +1,206 @@
+class Pool:
+    def __init__(self, intra_rate, inter_rate, death_rate, population, initial_infection_rate):
+        self.intra_rate = intra_rate
+        self.inter_rate = inter_rate
+        self.death_rate = death_rate
+        self.uninfected = population * (1 - initial_infection_rate)
+        self.infected = population * initial_infection_rate
+        self.dead = 0
+
+    def get_population(self):
+        if (self.infected + self.uninfected == 0):
+            return 1
+        return self.uninfected + self.infected
+
+
+class Pool_Group:
+    def __init__(self, pools, min_age, contact_rate):
+        self.vaccinated = pools[0]
+        self.unvaccinated = pools[1]
+        self.min_age = min_age
+        self.contact_rate = contact_rate
+
+    def get_population(self):
+        return self.vaccinated.get_population() + self.unvaccinated.get_population()
+
+
+class Simulation:
+    def __init__(self, pools, infection_rate, vax_order, vax_rate, recovery_rate):
+        # pools should be a Pool_Group object
+        # infection_rate is the baseline rate at which people get infected
+        # vaccination order is an array of the order in which pools get vaccines
+        # base_rate should be the number of contacts(no matter the status) times
+        # the probability of infection
+        self.pools = pools
+        self.base_rate = infection_rate
+        self.recovery_rate = recovery_rate
+        self.vaccination_order = vax_order
+        self.vaccination_rate = vax_rate
+        self.population = self.get_total_population()
+
+    def get_total_population(self):
+        ans = 0
+        for group in self.pools.values():
+            ans += group.vaccinated.uninfected + group.unvaccinated.uninfected
+        return ans + self.get_total_infections()
+
+    def get_total_infections(self):
+        ans = 0
+        for group in self.pools.values():
+            ans += group.vaccinated.infected + group.unvaccinated.infected
+        return ans
+
+    def get_total_deaths(self):
+        ans = 0
+        for group in self.pools.values():
+            ans += group.vaccinated.dead + group.unvaccinated.dead
+        return ans
+
+    def vaccinate(self):
+        # step through one day of vaccination according to the policy
+        # only vaccinate uninfected people, assume the infected will recover to a vaccinated status
+        vax_left = self.vaccination_rate
+        for group in self.vaccination_order:
+            pool = self.pools.get(group)
+            # vaccinate the uninfected in order
+            vax_amount = min(vax_left, pool.unvaccinated.uninfected)
+            vax_left -= vax_amount
+            # transfer the vaccinated to the new pool
+            pool.unvaccinated.uninfected -= vax_amount
+            pool.vaccinated.uninfected += vax_amount
+            if vax_left == 0:
+                break
+
+    def infect_and_kill(self, min_age, vaccinated, original_pools, total_infected):
+        pool_group = original_pools.get(min_age)
+        if vaccinated:
+            pool = pool_group.vaccinated
+        else:
+            pool = pool_group.unvaccinated
+        # calculate deaths
+        deaths = pool.infected * pool.death_rate
+        infections = 0
+        percentage = pool.uninfected / pool.get_population()
+        # assume that the contact rate is the same for all infected people
+        # calculate intra-pool infections
+        infections += self.base_rate * pool.intra_rate * \
+            percentage * pool.infected * pool.get_population() / self.population
+        # print("Intra: ", infections)
+        # calculate infections from the other group
+        if vaccinated:
+            cross_population = pool_group.unvaccinated.infected
+        else:
+            cross_population = pool_group.vaccinated.infected
+        infections += self.base_rate * pool_group.contact_rate * \
+            percentage * cross_population * pool.get_population() / self.population
+        # print("Cross: ", infections)
+        # calculate infections from the rest of the population
+        infections += self.base_rate * pool.inter_rate * percentage * \
+            (total_infected - pool.infected - cross_population) * \
+            pool.get_population() / self.population
+        # print("Inter: ", infections)
+        # update values
+        if vaccinated:
+            actual_pool = self.pools.get(min_age).vaccinated
+        else:
+            actual_pool = self.pools.get(min_age).unvaccinated
+        actual_pool.uninfected -= infections
+        actual_pool.infected += infections - deaths
+        actual_pool.dead += deaths
+
+    def recover(self, min_age):
+        group = self.pools.get(min_age)
+        # unvaccinated recoveries
+        unvaccinated_recoveries = group.unvaccinated.infected * self.recovery_rate
+        group.unvaccinated.infected -= unvaccinated_recoveries
+        group.vaccinated.uninfected = unvaccinated_recoveries
+        # vaxxed recoveries
+        vaccinated_recoveries = group.vaccinated.infected * self.recovery_rate
+        group.vaccinated.infected -= vaccinated_recoveries
+        group.vaccinated.uninfected += vaccinated_recoveries
+
+    def step(self):
+        self.vaccinate()
+        original_pools = self.pools
+        total_infected = self.get_total_infections()
+        for age in self.vaccination_order:
+            self.infect_and_kill(age, True, original_pools, total_infected)
+            self.infect_and_kill(age, False, original_pools, total_infected)
+            self.recover(age)
+
+
+VACCINATION_EFFICIENCY = 0.1
+VACCINATED_HANGOUT_RATE = 1.5
+UNVACCINATED_HANGOUT_RATE = 0.8
+MORTALITY_RATE = 0.0005
+INITIAL_INFECTION_RATE = 0.001
+CONTACT_RATE = 0.5
+BASE_RATE = 2.28/14
+# 0-9
+# children have extra contact among themselves, so their intra_rate and
+# contact_rate are higher
+pools_0 = [Pool(
+    intra_rate=VACCINATION_EFFICIENCY * VACCINATED_HANGOUT_RATE * 2,
+    inter_rate=VACCINATION_EFFICIENCY * VACCINATED_HANGOUT_RATE,
+    death_rate=VACCINATION_EFFICIENCY * MORTALITY_RATE,
+    population=0,
+    initial_infection_rate=INITIAL_INFECTION_RATE), Pool(
+    intra_rate=UNVACCINATED_HANGOUT_RATE * 2,
+    inter_rate=UNVACCINATED_HANGOUT_RATE,
+    death_rate=MORTALITY_RATE,
+    population=5000,
+    initial_infection_rate=INITIAL_INFECTION_RATE)]
+Group_0 = Pool_Group(pools=pools_0, min_age=0, contact_rate=CONTACT_RATE * 2)
+# 10-19
+# children have extra contact among themselves, so their intra_rate and
+# contact_rate are higher
+pools_10 = [Pool(
+    intra_rate=VACCINATION_EFFICIENCY * VACCINATED_HANGOUT_RATE * 2,
+    inter_rate=VACCINATION_EFFICIENCY * VACCINATED_HANGOUT_RATE,
+    death_rate=VACCINATION_EFFICIENCY * MORTALITY_RATE,
+    population=0,
+    initial_infection_rate=INITIAL_INFECTION_RATE), Pool(
+    intra_rate=UNVACCINATED_HANGOUT_RATE * 2,
+    inter_rate=1,
+    death_rate=MORTALITY_RATE,
+    population=5000,
+    initial_infection_rate=INITIAL_INFECTION_RATE)]
+Group_10 = Pool_Group(pools=pools_10, min_age=10,
+                      contact_rate=CONTACT_RATE * 2)
+# ADULTS
+# Use all standard constants
+pools_20 = [Pool(
+    intra_rate=VACCINATION_EFFICIENCY * VACCINATED_HANGOUT_RATE,
+    inter_rate=VACCINATION_EFFICIENCY * VACCINATED_HANGOUT_RATE,
+    death_rate=VACCINATION_EFFICIENCY * MORTALITY_RATE,
+    population=0,
+    initial_infection_rate=INITIAL_INFECTION_RATE), Pool(
+    intra_rate=UNVACCINATED_HANGOUT_RATE,
+    inter_rate=1,
+    death_rate=MORTALITY_RATE,
+    population=85000,
+    initial_infection_rate=INITIAL_INFECTION_RATE)]
+Group_20 = Pool_Group(pools=pools_20, min_age=20, contact_rate=CONTACT_RATE)
+# 70+
+# The elderly are more likely to die of covid
+pools_70 = [Pool(
+    intra_rate=VACCINATION_EFFICIENCY * VACCINATED_HANGOUT_RATE,
+    inter_rate=VACCINATION_EFFICIENCY * VACCINATED_HANGOUT_RATE,
+    death_rate=VACCINATION_EFFICIENCY * MORTALITY_RATE * 10,
+    population=0,
+    initial_infection_rate=INITIAL_INFECTION_RATE), Pool(
+    intra_rate=UNVACCINATED_HANGOUT_RATE,
+    inter_rate=1,
+    death_rate=MORTALITY_RATE * 10,
+    population=5000,
+    initial_infection_rate=INITIAL_INFECTION_RATE)]
+Group_70 = Pool_Group(pools=pools_70, min_age=70, contact_rate=CONTACT_RATE)
+pools = {0: Group_0, 10: Group_10, 20: Group_20, 70: Group_70}
+policy = {70, 0, 10, 20}
+simulation = Simulation(pools=pools, infection_rate=BASE_RATE, vax_order=policy,
+                        vax_rate=3500/30, recovery_rate=0.07)
+for i in range(100):
+    simulation.step()
+    print("Day: ", i)
+    print("Infected: ", simulation.get_total_infections())
+    print("Dead: ", simulation.get_total_deaths())
