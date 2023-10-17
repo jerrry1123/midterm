@@ -136,6 +136,7 @@ MORTALITY_RATE = 0.0005
 INITIAL_INFECTION_RATE = 0.001
 CONTACT_RATE = 0.5
 BASE_RATE = 2.28/14
+VAX_RATE = 3500/30
 # 0-9
 # children have extra contact among themselves, so their intra_rate and
 # contact_rate are higher
@@ -196,9 +197,9 @@ pools_70 = [Pool(
     initial_infection_rate=INITIAL_INFECTION_RATE)]
 Group_70 = Pool_Group(pools=pools_70, min_age=70, contact_rate=CONTACT_RATE)
 pools = {0: Group_0, 10: Group_10, 20: Group_20, 70: Group_70}
-policy = {70, 0, 10, 20}
+policy = [70, 0, 10, 20]
 simulation = Simulation(pools=pools, infection_rate=BASE_RATE, vax_order=policy,
-                        vax_rate=3500/30, recovery_rate=0.07)
+                        vax_rate=VAX_RATE, recovery_rate=0.07)
 for i in range(100):
     simulation.step()
     print("Day: ", i)
