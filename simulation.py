@@ -162,7 +162,7 @@ pools_10 = [Pool(
     population=0,
     initial_infection_rate=INITIAL_INFECTION_RATE), Pool(
     intra_rate=UNVACCINATED_HANGOUT_RATE * 2,
-    inter_rate=1,
+    inter_rate=UNVACCINATED_HANGOUT_RATE,
     death_rate=MORTALITY_RATE,
     population=5000,
     initial_infection_rate=INITIAL_INFECTION_RATE)]
@@ -177,7 +177,7 @@ pools_20 = [Pool(
     population=0,
     initial_infection_rate=INITIAL_INFECTION_RATE), Pool(
     intra_rate=UNVACCINATED_HANGOUT_RATE,
-    inter_rate=1,
+    inter_rate=UNVACCINATED_HANGOUT_RATE,
     death_rate=MORTALITY_RATE,
     population=85000,
     initial_infection_rate=INITIAL_INFECTION_RATE)]
@@ -191,7 +191,7 @@ pools_70 = [Pool(
     population=0,
     initial_infection_rate=INITIAL_INFECTION_RATE), Pool(
     intra_rate=UNVACCINATED_HANGOUT_RATE,
-    inter_rate=1,
+    inter_rate=UNVACCINATED_HANGOUT_RATE,
     death_rate=MORTALITY_RATE * 10,
     population=5000,
     initial_infection_rate=INITIAL_INFECTION_RATE)]
@@ -205,3 +205,7 @@ for i in range(100):
     print("Day: ", i)
     print("Infected: ", simulation.get_total_infections())
     print("Dead: ", simulation.get_total_deaths())
+
+# 0, 10, 70, 20 => 4396 infected, 102 dead
+# 0, 70, 10, 20 => 4461 infected, 84 dead
+# 70, 0, 10, 20 => 4528 infected, 74 dead
