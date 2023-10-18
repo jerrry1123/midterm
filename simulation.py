@@ -164,20 +164,20 @@ VACCINATED_HANGOUT_RATE = 1.5
 # that they want to keep themselves safe
 UNVACCINATED_HANGOUT_RATE = 0.8
 # base percentage chance of an infected person dying of Covid per day
-MORTALITY_RATE = 0.0005
+MORTALITY_RATE = 0.001
 # starting percentage of each pool that is infected
 INITIAL_INFECTION_RATE = 0.001
 # Base contact rate for the two pools within the pool group
 CONTACT_RATE = 0.5
 # Amount of expected infections per infected person per day
-BASE_RATE = 2.28/14
+BASE_RATE = 2.28/14 * 2
 # Amount of vaccines available per day
 VAX_RATE = 3500/30
 
 
 # 0-9
 # children have extra contact among themselves, so their intra_rate and
-# contact_rate are higher
+# contact_rate are higher but are less likely to die of covid
 pools_0 = [Pool(
     intra_rate=VACCINATION_EFFICIENCY * VACCINATED_HANGOUT_RATE * 2,
     inter_rate=VACCINATION_EFFICIENCY * VACCINATED_HANGOUT_RATE,
@@ -186,14 +186,14 @@ pools_0 = [Pool(
     initial_infection_rate=INITIAL_INFECTION_RATE), Pool(
     intra_rate=UNVACCINATED_HANGOUT_RATE * 2,
     inter_rate=UNVACCINATED_HANGOUT_RATE,
-    death_rate=MORTALITY_RATE,
-    population=5000,
+    death_rate=MORTALITY_RATE/10,
+    population=6000,
     initial_infection_rate=INITIAL_INFECTION_RATE)]
 Group_0 = Pool_Group(pools=pools_0, min_age=0, contact_rate=CONTACT_RATE * 2)
 
 # 10-19
 # children have extra contact among themselves, so their intra_rate and
-# contact_rate are higher
+# contact_rate are higher but are less likely to die of covid
 pools_10 = [Pool(
     intra_rate=VACCINATION_EFFICIENCY * VACCINATED_HANGOUT_RATE * 2,
     inter_rate=VACCINATION_EFFICIENCY * VACCINATED_HANGOUT_RATE,
@@ -202,8 +202,8 @@ pools_10 = [Pool(
     initial_infection_rate=INITIAL_INFECTION_RATE), Pool(
     intra_rate=UNVACCINATED_HANGOUT_RATE * 2,
     inter_rate=UNVACCINATED_HANGOUT_RATE,
-    death_rate=MORTALITY_RATE,
-    population=5000,
+    death_rate=MORTALITY_RATE/10,
+    population=18000,
     initial_infection_rate=INITIAL_INFECTION_RATE)]
 Group_10 = Pool_Group(pools=pools_10, min_age=10,
                       contact_rate=CONTACT_RATE * 2)
@@ -219,7 +219,7 @@ pools_20 = [Pool(
     intra_rate=UNVACCINATED_HANGOUT_RATE,
     inter_rate=UNVACCINATED_HANGOUT_RATE,
     death_rate=MORTALITY_RATE,
-    population=85000,
+    population=65000,
     initial_infection_rate=INITIAL_INFECTION_RATE)]
 Group_20 = Pool_Group(pools=pools_20, min_age=20, contact_rate=CONTACT_RATE)
 
@@ -234,7 +234,7 @@ pools_70 = [Pool(
     intra_rate=UNVACCINATED_HANGOUT_RATE,
     inter_rate=UNVACCINATED_HANGOUT_RATE,
     death_rate=MORTALITY_RATE * 10,
-    population=5000,
+    population=11000,
     initial_infection_rate=INITIAL_INFECTION_RATE)]
 Group_70 = Pool_Group(pools=pools_70, min_age=70, contact_rate=CONTACT_RATE)
 pools = {0: Group_0, 10: Group_10, 20: Group_20, 70: Group_70}
